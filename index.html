@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+</head>
+<body>
+	<!-- // <script type="text/javascript" src="js/loadXML.js"></script> -->
+	<script type="text/javascript">
+	/************************************************/
+	//读取xml
+	/************************************************/
+	function loadXML(file){
+		try //Internet Explorer  
+		{  
+			xmlDoc=new ActiveXObject("Microsoft.XMLDOM");  
+			xmlDoc.async=false;  
+			xmlDoc.load(file);  
+		}catch(e){  
+			try //Firefox, Mozilla, Opera, etc.  
+			{  
+				xmlDoc=document.implementation.createDocument("","",null);  
+				xmlDoc.async=false;  
+				xmlDoc.load(file);  
+			}catch(e){  
+				try //Google Chrome  
+				{  
+					var xmlhttp = new window.XMLHttpRequest();  
+					xmlhttp.open("GET",file,false);  
+					xmlhttp.send(null);  
+					xmlDoc = xmlhttp.responseXML.documentElement;  
+				}catch(e){  
+					alert("您的浏览器不能正常加载文件。请切换到兼容模式，或者更换浏览器"); 
+				}
+			}  
+		}  
+		return xmlDoc;
+	}
+	var xmlFileName = "LG20.xml";
+	var xmlDoc = loadXML(xmlFileName);
+	var xmlDom = xmlDoc.documentElement;
+	// console.log(xmlDom);
+	/************************************************/
+	//处理load的XML
+	/************************************************/
+	var aNodes = xmlDom.getElementsByTagName("node");
+	var aWays = xmlDom.getElementsByTagName("way");
+	var aShopWays = [];		//包含全部属性为“shop”的way的信息
+	for(var i = 0; i < aWays.length; i++){	//遍历全部ways
+		var aTemp = {};
+		try{
+			var aWayTags = aWays[i].getElementsByTagName("tag");
+			for(var j = 0; j < aWayTags.length; j++){	//遍历全部ways[i]的子节点
+				if(aWayTags[j].getAttribute("v") == "shop"){
+					var aWayNodes = [];		//暂存属性为“shop”的ways[i]的“nd”子节点的属性“ref”
+					for(var z = 0; z < aWays[i].getElementsByTagName("nd").length; z++){	//遍历全部属性为"shop"的ways[i]的子节点"nd"
+						aWayNodes.push(aWays[i].getElementsByTagName("nd")[z].getAttribute("ref"));
+					}
+					aTemp = {
+						shopName: aWays[i].getElementsByTagName("tag")[1].getAttribute("v"),
+						node: aWayNodes
+					}
+					aShopWays.push(aTemp);
+				}
+			}
+		}catch(e){
+			continue;
+		}
+	}
+	/************************************************/
+	//生成Json
+	/************************************************/
+	var aResult = [];
+	for(var i = 0; i < aShopWays.length; i++){		//遍历全部ShopWays
+		var aTemp = [];
+		for(var z = 0; z < aShopWays[i]["node"].length; z++){	//遍历aShopWays[i]里的node数组
+			for(var j = 0; j < aNodes.length; j++){		//遍历全部aNode
+				if(aShopWays[i]["node"][z] == aNodes[j].getAttribute("id")){
+					aTemp.push([aNodes[j].getAttribute("lat"),aNodes[j].getAttribute("lon")]);
+				}
+			}
+		}
+		aResult.push({
+			shopName: aShopWays[i]["shopName"],
+			node: aTemp
+		});
+	}
+	// console.dir(aResult);
+	/************************************************/
+	//生成本地文件
+	/************************************************/
+	var fso, tf;
+	fso = new ActiveXObject("Scripting.FileSystemObject");
+	tf = fso.CreateTextFile("D:\\LG20.txt",true);
+		tf.WriteLine("[");
+	for(var i = 0; i < aResult.length; i++){
+		var temp = "";
+		for(var j = 0; j < aResult[i]["node"].length; j++){
+			if(j == aResult[i]["node"].length-1){
+				temp += '['+aResult[i]["node"][j]+']';
+			}else{
+				temp += '['+aResult[i]["node"][j]+'],';
+			}
+		}
+		var tempResult = "["+temp+"]";
+		if(i == aResult.length -1){
+			tf.WriteLine('{"shopName":'+aResult[i]["shopName"]+',"node":'+tempResult+"}");
+
+		}else{
+			tf.WriteLine('{"shopName":'+aResult[i]["shopName"]+',"node":'+tempResult+"},");
+			
+		}
+	}
+	tf.WriteLine("]");
+	</script>
+</body>
+</html>
